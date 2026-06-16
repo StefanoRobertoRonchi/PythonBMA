@@ -1,0 +1,41 @@
+name: Bayesian Linear Regression - Feature Selection Pipeline
+
+
+# Step 1) Define filters and rules to launch the pipeline
+on:
+    workflow_dispatch:   # Define manual action on github action to start the pipeline
+    push:
+        branches: [main]
+        paths:
+            - "src/**"
+            - "data/**"
+            - "config/config.yaml"
+
+jobs:
+    BMA-Model-Selection:
+        runs-on: ubuntu-latest   #define the OS on which the job will run
+        steps:
+            - name: Check the repo
+              uses: actions/checkout@v4
+
+            - name: check config exists
+              if: ${{ hashFiles('config/config.yaml') == ''}}
+              run: |
+                echo "config/config.yaml not found. The pipeline is interrupted"
+                exit 1
+
+
+            - name: Setup Python Environment
+              uses: actions/setup-python@v5
+              with:
+                python-version: "3.12"
+
+              run: |
+                python -m venv venv
+                source venv/bin/activate
+                pip install -r requirements.txt
+
+            - name: Define Data and Compute Regression Model
+              run: |
+                source venv/bin/activate
+                python src/main.py   config/config.yml
