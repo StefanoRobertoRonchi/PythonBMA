@@ -190,7 +190,7 @@ def PiP(BMA, X):
     """
     Extract the Posterior Inclusion Probability of each regressor. The output is a pandas Series.
     """
-    if isinstance(X,pd.DataFrame):
+    if isinstance(X,(pd.DataFrame, pl.Series, pl.DataFrame, pd.Series)):
         regressors = X.columns
         if BMA["added_intercept"]:
             regressors = ["Intercept"] + list(regressors)
