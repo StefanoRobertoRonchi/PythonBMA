@@ -1,6 +1,6 @@
 from BMA_SSVS.BMA_SSVS import Bayesian_MA_SSVS, PiP, TopModels, data_preparation
 from scipy.stats import norm
-
+import yaml 
 
 if __name__ == "__main__":
     with open("config/config.yaml") as f:
@@ -16,7 +16,7 @@ if __name__ == "__main__":
         raise KeyError("The dataset doesn't contained the features specified")
 
     # Model development
-    models = BMA_SSVS.Bayesian_MA_SSVS(y=y, X=X, 
+    models = Bayesian_MA_SSVS(y=y, X=X, 
                     n=conf["params"]["n"], burn_in= conf["params"]["burn_in"],
                     a=conf["params"]["a"], b=conf["params"]["b"], tau = conf["params"]["tau"],
                     c=conf["params"]["c"], p= conf["params"]["p"],
