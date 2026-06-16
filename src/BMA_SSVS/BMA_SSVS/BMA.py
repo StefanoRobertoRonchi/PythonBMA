@@ -201,56 +201,82 @@ def PiP(BMA, X):
     return pd.Series(PIP, index = regressors)
 
 
-def TopModels(BMA, y, X, n_models: int=5):
+def TopModels(BMA, y, X, n_models: int = 5):
     """
     Extract the list of most frequent models within the SSVS chain. For these promising combinations the R2 are computed for each model and 
-    aggregated to report the p05,median,mean,p95.
-    X must be the same used during the estimation. 
-    
+    aggregated to report the p05,median,mean,p95. X must be the same used during the estimation. 
     """
+
     lista_modelli = pd.DataFrame(BMA["Variable_Selected"])
     beta_modelli = pd.DataFrame(BMA["Betas"])
 
-    if isinstance(X,pd.DataFrame):
-        if BMA["added_intercept"]:
-            X = pd.concat([pd.DataFrame(np.ones(X.shape[0]), columns=['Intercept']), X], axis=1).copy()
-        lista_modelli.columns = X.columns
-        beta_modelli.columns = X.columns
+    # Preserve variable names
+    if isinstance(X, pd.DataFrame):
+        x_names = list(X.columns)
+        X_array = X.values
+    elif isinstance(X, pl.DataFrame):
+        x_names = X.columns
+        X_array = X.to_numpy()
     else:
-        if BMA["added_intercept"]:
-            X = np.column_stack((np.ones(X.shape[0]), X))
-        lista_modelli.columns = range(X.shape[1])
-        beta_modelli.columns = range(X.shape[1])
-        
-    lista_modelli.index = [f"Modello{i}" for i in range(1, lista_modelli.shape[0] + 1)]
-    beta_modelli.index = [f"Modello{i}" for i in range(1, beta_modelli.shape[0] + 1)]
-    
-    #### Calcolo indicatori di fitting
-    TSS = np.sum((y-y.mean())**2)
-    for index,row in beta_modelli.iterrows():
-        RSS = (y - X @ row).T @ (y - X @ row)
-        R2 = 1 - (RSS/TSS)
-        lista_modelli.loc[index,"R2"] = R2
-        
-    #### Salvataggio dei modelli 
+        X_array = np.asarray(X)
+        x_names = list(range(X_array.shape[1]))
+
+    if BMA["added_intercept"]:
+        x_names = ["Intercept"] + x_names
+        X_array = np.column_stack((np.ones(X_array.shape[0]), X_array))
+
+    lista_modelli.columns = x_names
+    beta_modelli.columns = x_names
+
+    # Convert y only for numerical computation
+    if isinstance(y, (pd.Series, pd.DataFrame)):
+        y_array = y.values.ravel()
+    elif isinstance(y, (pl.Series, pl.DataFrame)):
+        y_array = y.to_numpy().ravel()
+    else:
+        y_array = np.asarray(y).ravel()
+
+    lista_modelli.index = [
+        f"Modello{i}" for i in range(1, lista_modelli.shape[0] + 1)
+    ]
+    beta_modelli.index = [
+        f"Modello{i}" for i in range(1, beta_modelli.shape[0] + 1)
+    ]
+
+    # Fitting indicators
+    tss = np.sum((y_array - y_array.mean()) ** 2)
+
+    for index, row in beta_modelli.iterrows():
+        beta = row.to_numpy()
+        residuals = y_array - X_array @ beta
+        rss = residuals.T @ residuals
+        r2 = 1 - (rss / tss)
+        lista_modelli.loc[index, "R2"] = r2
+
     gamma_cols = [c for c in lista_modelli.columns if c != "R2"]
 
     model_selected = (
-    lista_modelli
-      .groupby(gamma_cols, dropna=False)["R2"]
-      .agg(
-          R2_mean="mean",
-          R2_median="median",
-          R2_q05=lambda s: s.quantile(0.05),
-          R2_q95=lambda s: s.quantile(0.95),
-          count="size"
-      )
-      .sort_values("count", ascending=False)
-      .head(n_models)
-      .reset_index()
+        lista_modelli
+        .groupby(gamma_cols, dropna=False)["R2"]
+        .agg(
+            R2_mean="mean",
+            R2_median="median",
+            R2_q05=lambda s: s.quantile(0.05),
+            R2_q95=lambda s: s.quantile(0.95),
+            count="size",
         )
-    #### Definizione nome variabili
-    model_selected.columns = gamma_cols + ["R2_mean","R2_median","R2_q05", "R2_q95","count"]
+        .sort_values("count", ascending=False)
+        .head(n_models)
+        .reset_index()
+    )
+
+    model_selected.columns = gamma_cols + [
+        "R2_mean",
+        "R2_median",
+        "R2_q05",
+        "R2_q95",
+        "count",
+    ]
     return model_selected
 
 def data_preparation(filepath: str, data: str, features: list, target: list):
