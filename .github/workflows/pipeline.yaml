@@ -30,6 +30,7 @@ jobs:
               with:
                 python-version: "3.12"
 
+            - name: Create venv and install dependencies
               run: |
                 python -m venv venv
                 source venv/bin/activate
@@ -38,4 +39,4 @@ jobs:
             - name: Define Data and Compute Regression Model
               run: |
                 source venv/bin/activate
-                python src/main.py   config/config.yml
+                python src/main.py   config/config.yaml
