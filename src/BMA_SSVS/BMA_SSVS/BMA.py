@@ -1,7 +1,6 @@
 import os 
 import pandas as pd
 import numpy as np
-import statsmodels.api as sm
 import polars as pl
 from scipy.stats import norm
 
@@ -259,14 +258,14 @@ def data_preparation(filepath: str, data: str, features: list, target: list):
     """
     try:
         df = pl.read_csv(os.path.join(filepath,data))
-        df = df.rename {[
+        df = df.rename({[
         col.strip().lower() for col in df.columns
-                    ]}
+                    ]})
         y = pl.select(target)
         X = pl.select(features)
         del df
     except:
-        FileNotFoundError("The path doesn't contain the specified dataset")
+        raise FileNotFoundError("The path doesn't contain the specified dataset")
     return y,X
 
 ################### Esempio ################### 

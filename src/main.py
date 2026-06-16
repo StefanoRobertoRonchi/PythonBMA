@@ -13,7 +13,7 @@ if __name__ == "__main__":
     try:
         y,X = data_preparation(filepath = conf["filepath"], data = conf["data"], features = features, target = target )
     except:
-        KeyError("The dataset doesn't contained the features specified")
+        raise KeyError("The dataset doesn't contained the features specified")
 
     # Model development
     models = BMA_SSVS.Bayesian_MA_SSVS(y=y, X=X, 
