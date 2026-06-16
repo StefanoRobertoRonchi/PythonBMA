@@ -258,11 +258,11 @@ def data_preparation(filepath: str, data: str, features: list, target: list):
     """
     try:
         df = pl.read_csv(os.path.join(filepath,data))
-        df = df.rename({[
-        col.strip().lower() for col in df.columns
-                    ]})
-        y = pl.select(target)
-        X = pl.select(features)
+        df = df.rename({
+        col:col.strip().lower() for col in df.columns
+                    })
+        y = df.select(target)
+        X = df.select(features)
         del df
     except:
         raise FileNotFoundError("The path doesn't contain the specified dataset")
