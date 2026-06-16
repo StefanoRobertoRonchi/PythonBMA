@@ -22,8 +22,7 @@ if __name__ == "__main__":
                     c=conf["params"]["c"], p= conf["params"]["p"],
                     identity = conf["params"]["identity"], add_intercept = conf["params"]["add_intercept"],
                     normalize_x = conf["params"]["normalize_x"], 
-                    normalize_y = conf["params"]["normalize_y"],
-                    seed: int=42)
+                    normalize_y = conf["params"]["normalize_y"])
 
     # Print the Posterior Inclusion Probability
     print(PiP(models,X))
