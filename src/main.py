@@ -3,7 +3,7 @@ from scipy.stats import norm
 
 
 if __name__ == "__main__":
-    with open(config.yaml) as f:
+    with open("config/config.yaml") as f:
         conf = yaml.safe_load(f)
 
     target = conf["target"]
