@@ -26,15 +26,16 @@ def Bayesian_MA_SSVS(y, X,
     ### Sigma^2 ~ IG(a,b) with avg as res_avg^2 OLS --> Don't depend on the specific model
     ### Gamma j ~ Bernoulli(pj) with pj = 0.5 --> flat prior for X_j to appear in the model
     """
-    if y.ndim > 1 and y.shape[1] > 1:
-        raise ValueError("Dimension Error: target must be one-dimensional")
 
     if isinstance(y, (pd.Series, pd.DataFrame, pl.Series, pl.DataFrame)):
         y = y.to_numpy().ravel() if isinstance(y, (pl.Series, pl.DataFrame)) else y.values.ravel()
+
+    if y.ndim > 1 and y.shape[1] > 1:
+        raise ValueError("Dimension Error: target must be one-dimensional")
     
     # X: ensure 2D numpy array
     if isinstance(X, (pd.Series, pd.DataFrame, pl.Series, pl.DataFrame)):
-        X = X.to_numpy() if isinstance(X,(pl.Serie,pl.DataFrame)) else X.values
+        X = X.to_numpy() if isinstance(X,(pl.Series,pl.DataFrame)) else X.values
     else:
         X = np.asarray(X)
     
