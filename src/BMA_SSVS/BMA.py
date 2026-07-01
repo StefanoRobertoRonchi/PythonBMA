@@ -15,14 +15,14 @@ from scipy.stats import norm
 ################### Funzioni ################### 
 def Bayesian_MA_SSVS(y, X, 
                     n: int=1000, burn_in: int=500,
-                    a: int=None, b: int=None, tau: int=None, c: int=None, p: float=None,
+                    a: int=None, b: int=None, betas_sd_ratio: int=None, c: int=None, p: float=None,
                     identity: bool = False, add_intercept: bool = True,
                     normalize_x: bool = True, normalize_y: bool = False,
-                    seed: int=42):
+                    seed: int=42, expected_sing: dict = None):
     """
     #### Hyperparameters priors and stating points ####
     ### Priors on Beta | Gamma ~ N_k(0, D_gamma*R*D_gamma) 
-           where D = diag(a1*tau_1 , .... , ak*tau_k) where aj = 1 if gamma_j = 1 else aj = c
+           where D = diag(a1*betas_sd_ratio_1 , .... , ak*betas_sd_ratio_k) where aj = 1 if gamma_j = 1 else aj = c
     ### Sigma^2 ~ IG(a,b) with avg as res_avg^2 OLS --> Don't depend on the specific model
     ### Gamma j ~ Bernoulli(pj) with pj = 0.5 --> flat prior for X_j to appear in the model
     """
@@ -99,13 +99,13 @@ def Bayesian_MA_SSVS(y, X,
         b = (a - 1)*sigma_2_avg
 
     # Slab and spike parameter
-    if tau is None:
-        tau = 20 # scale parameter to shrink the starting value of the hyperparameter Tau (George McCulloch : rule of thumb = 10)    
+    if betas_sd_ratio is None:
+        betas_sd_ratio = 10 # Ratio between Beta OLS SE and Beta prior variance (George McCulloch : rule of thumb = 10)    
     if c is None:
-        c = tau*10 # Standard Dev. slab multiplicative factor   
+        c = betas_sd_ratio*10 # Standard Dev. slab multiplicative factor   
     if p is None:
         p = 0.5 # Prior inclusion probability for each regressor
-    tau_sq = (np.diag(var_beta_ols)/(tau**2)).ravel()  ## --> shrinkage parameter (Tau squared shrinked)
+    betas_sd_ratio_sq = (np.diag(var_beta_ols)/(betas_sd_ratio**2)).ravel()  ## --> Beta Shrinkage prior variance (betas_sd_ratio squared shrinked)
     
     for i in range(n):
         if i % 500 == 0:
@@ -113,8 +113,8 @@ def Bayesian_MA_SSVS(y, X,
         #____________________________________________________________
         #### Estraggo i betas ~ N(Beta_post, V_beta_post)
         # Variance Beta structure 
-        a_beta_var = 1 + (c-1)*gammas  # Slab variance indicator, if the indicator gamma = 1
-        d = a_beta_var*np.sqrt(tau_sq) # beta prior variance is amplified by c^2
+        a_beta_var = 1 + (c-1)*gammas  # Slab standard deviation factor
+        d = a_beta_var*np.sqrt(betas_sd_ratio_sq) # beta prior std, amplified by c if gamma = 1
         D = np.diag(d)
         V_beta_post = np.linalg.inv(np.linalg.inv(D @ R @ D) + (X_t @ X)/sigma_sq)
         Beta_post = V_beta_post @ X_t @ y / sigma_sq
@@ -125,8 +125,8 @@ def Bayesian_MA_SSVS(y, X,
         #### Estraggo le probabilità di vedere modello 
         unif = rng.random(n_var) # probability selection threshold
         # Gamma posterior : f(gamma =1)* f(beta| gamma =1) /(f(gamma =1)* f(beta| gamma =1) + f(gamma =0)* f(beta| gamma =0))
-        sd_slab  = np.sqrt(tau_sq)*c
-        sd_spike = np.sqrt(tau_sq)
+        sd_slab  = np.sqrt(betas_sd_ratio_sq)*c
+        sd_spike = np.sqrt(betas_sd_ratio_sq)
 
         log_num = p*norm.logpdf(Betas, loc=0.0, scale=sd_slab)
         log_den = np.logaddexp(log_num, (1-p)*norm.logpdf(Betas, loc=0.0, scale=sd_spike))
@@ -148,10 +148,13 @@ def Bayesian_MA_SSVS(y, X,
         #____________________________________________________________
         #### Saving the posterior parameters
         if i >= (burn_in):
-            idx = i - burn_in
-            gamma_final[idx,] = gammas
-            betas_final[idx,] = Betas
-            sig_final[idx] = sigma_sq
+            if expected_sign_check(sign_dict: dict, regressors : list, betas: list):
+                idx = i - burn_in
+                gamma_final[idx,] = gammas
+                betas_final[idx,] = Betas
+                sig_final[idx] = sigma_sq
+            else:
+                pass
     
     if normalize_x and normalize_y:
         betas_final[:,0] = mu_y + betas_final[:,0]*sigma_y - betas_final[:,1:] @ (mu_X[1:]*sigma_y/sigma_X[1:])
@@ -294,6 +297,39 @@ def data_preparation(filepath: str, data: str, features: list, target: list):
     except:
         raise FileNotFoundError("The path doesn't contain the specified dataset")
     return y,X
+
+
+def expected_sign_check(sign_dict: dict, regressors : list, betas: list):
+    """Validate expected sign dictionary for regressors.
+
+    Args:
+        sign_dict (dict): mapping of regressor names to expected signs.
+        regressors (list): list of available regressor names.
+
+    Returns:
+        dict: normalized expected signs.
+    """
+    if not isinstance(sign_dict, dict):
+        raise TypeError("sign_dict must be a dict")
+    if not isinstance(regressors, list):
+        raise TypeError("regressors must be a list")
+    
+    betas_series = pd.Series(betas, index = regressors)
+
+    normalized_signs = {}
+    for regressor, sign in sign_dict.items():
+        if regressor not in regressors:
+            raise ValueError(f"Regressor '{regressor}' is not in the regressors list")
+        if isinstance(sign, str):
+            sign_lower = sign.strip().lower()
+            if sign_lower in {"positive", "pos", "+"} and beta_series[regressor] <= 0:
+                return False
+              
+            elif sign_lower in {"negative", "neg", "-"} and beta_series[regressor] >= 0:
+                return False
+            else:
+                pass
+
 
 ################### Esempio ################### 
 

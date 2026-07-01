@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bma-ssvs"
+version = "0.1.0"
+description = "Bayesian Model Averaging with stochastic search variable selection for linear regression models."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Stefano Roberto Ronchi" }]
+keywords = ["bayesian", "model-averaging", "regression", "statistics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Econometrics/Engineering :: Information Analysis",
+]
+dependencies = [
+    "PyYAML==6.0.2",
+    "pandas==2.3.1",
+    "numpy==2.3.2",
+    "scipy==1.16.0",
+    "statsmodels==0.14.5",
+    "polars==1.40.0",
+]
+
+[project.optional-dependencies]
+dev = ["build", "pytest", "pylint"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
