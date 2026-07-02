@@ -18,7 +18,7 @@ if __name__ == "__main__":
     # Model development
     models = Bayesian_MA_SSVS(y=y, X=X, 
                     n=conf["params"]["n"], burn_in= conf["params"]["burn_in"],
-                    a=conf["params"]["a"], b=conf["params"]["b"], tau = conf["params"]["tau"],
+                    a=conf["params"]["a"], b=conf["params"]["b"], betas_sd_ratio = conf["params"]["betas_sd_ratio"],
                     c=conf["params"]["c"], p= conf["params"]["p"],
                     identity = conf["params"]["identity"], add_intercept = conf["params"]["add_intercept"],
                     normalize_x = conf["params"]["normalize_x"], 
