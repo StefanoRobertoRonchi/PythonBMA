@@ -18,7 +18,7 @@ def Bayesian_MA_SSVS(y, X,
                     a: int=None, b: int=None, betas_sd_ratio: int=None, c: int=None, p: float=None,
                     identity: bool = False, add_intercept: bool = True,
                     normalize_x: bool = True, normalize_y: bool = False,
-                    seed: int=42, expected_sing: dict = None):
+                    seed: int=42, expected_sign: dict = None):
     """
     #### Hyperparameters priors and stating points ####
     ### Priors on Beta | Gamma ~ N_k(0, D_gamma*R*D_gamma) 
@@ -35,7 +35,18 @@ def Bayesian_MA_SSVS(y, X,
     
     # X: ensure 2D numpy array
     if isinstance(X, (pd.Series, pd.DataFrame, pl.Series, pl.DataFrame)):
-        X = X.to_numpy() if isinstance(X,(pl.Series,pl.DataFrame)) else X.values
+        if isinstance(X, pd.Series):
+            regressor_names = [X.name if X.name is not None else 0]
+            X = X.to_numpy().reshape(-1, 1)
+        elif isinstance(X, pd.DataFrame):
+            regressor_names = list(X.columns)
+            X = X.values
+        elif isinstance(X, pl.Series):
+            regressor_names = [X.name]
+            X = X.to_numpy().reshape(-1, 1)
+        else:  # pl.DataFrame
+            regressor_names = list(X.columns)
+            X = X.to_numpy()
     else:
         X = np.asarray(X)
     
@@ -120,6 +131,12 @@ def Bayesian_MA_SSVS(y, X,
         Beta_post = V_beta_post @ X_t @ y / sigma_sq
         # Sampling from a multivariate Normal
         Betas = Beta_post + np.linalg.cholesky(V_beta_post) @ rng.standard_normal(size = X.shape[1])
+        if expected_sign is not None:
+            if i>=burn_in and expected_sign_check(sign_dict=expected_sign, regressors=regressor_names, betas=Betas) == False: 
+                # the mechanism is tested only for combinations after the burn-in
+                continue # If True then a sign is not respected: discard the combination. 
+                
+            
         #____________________________________________________________
 
         #### Estraggo le probabilità di vedere modello 
@@ -147,15 +164,12 @@ def Bayesian_MA_SSVS(y, X,
 
         #____________________________________________________________
         #### Saving the posterior parameters
-        if i >= (burn_in):
-            if expected_sign_check(sign_dict: dict, regressors : list, betas: list):
-                idx = i - burn_in
-                gamma_final[idx,] = gammas
-                betas_final[idx,] = Betas
-                sig_final[idx] = sigma_sq
-            else:
-                pass
-    
+        if i >= (burn_in):        
+            idx = i - burn_in
+            gamma_final[idx,] = gammas
+            betas_final[idx,] = Betas
+            sig_final[idx] = sigma_sq
+
     if normalize_x and normalize_y:
         betas_final[:,0] = mu_y + betas_final[:,0]*sigma_y - betas_final[:,1:] @ (mu_X[1:]*sigma_y/sigma_X[1:])
         betas_final[:,1:] = betas_final[:,1:]*sigma_y/sigma_X[1:]
@@ -307,7 +321,7 @@ def expected_sign_check(sign_dict: dict, regressors : list, betas: list):
         regressors (list): list of available regressor names.
 
     Returns:
-        dict: normalized expected signs.
+        bool: True if all expected signs are respected, False otherwise.
     """
     if not isinstance(sign_dict, dict):
         raise TypeError("sign_dict must be a dict")
@@ -316,19 +330,20 @@ def expected_sign_check(sign_dict: dict, regressors : list, betas: list):
     
     betas_series = pd.Series(betas, index = regressors)
 
-    normalized_signs = {}
+    
     for regressor, sign in sign_dict.items():
         if regressor not in regressors:
             raise ValueError(f"Regressor '{regressor}' is not in the regressors list")
         if isinstance(sign, str):
             sign_lower = sign.strip().lower()
-            if sign_lower in {"positive", "pos", "+"} and beta_series[regressor] <= 0:
+            if sign_lower in {"positive", "pos", "+"} and betas_series[regressor] <= 0:
                 return False
-              
-            elif sign_lower in {"negative", "neg", "-"} and beta_series[regressor] >= 0:
+            elif sign_lower in {"negative", "neg", "-"} and betas_series[regressor] >= 0:
                 return False
             else:
-                pass
+                continue
+
+    return True
 
 
 ################### Esempio ################### 

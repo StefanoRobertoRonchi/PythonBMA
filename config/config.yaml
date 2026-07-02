@@ -18,7 +18,7 @@ params:
   burn_in: 1000
   a: null
   b: null
-  tau: null
+  betas_sd_ratio: null
   c: null
   p: null
   identity: false

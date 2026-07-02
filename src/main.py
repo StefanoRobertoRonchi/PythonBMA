@@ -1,4 +1,4 @@
-from BMA_SSVS.BMA_SSVS import Bayesian_MA_SSVS, PiP, TopModels, data_preparation
+from BMA_SSVS import Bayesian_MA_SSVS, PiP, TopModels, data_preparation
 from scipy.stats import norm
 import yaml 
 
